@@ -1,0 +1,21 @@
+{
+  "name": "fanusta-hospitality-outreach",
+  "version": "1.0.0",
+  "description": "Autonomous Hospitality Opportunity Discovery & Outreach System",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test-agents.js",
+    "setup-task": "node setup-task.js"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.13",
+    "rss-parser": "^3.13.0",
+    "xlsx": "^0.18.5"
+  },
+  "type": "module"
+}

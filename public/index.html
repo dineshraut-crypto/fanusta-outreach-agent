@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fanusta - Hospitality Opportunity Discovery & Outreach</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand-logo">
+        <span class="logo-accent">Fanusta</span>
+        <span class="logo-sub">Hospitality Agent</span>
+      </div>
+      <nav class="nav-menu">
+        <a href="#" class="nav-item active" data-tab="overview" id="nav-overview">
+          <svg class="nav-icon" viewBox="0 0 24 24" width="18" height="18"><path d="M3 13h1v7c0 1.103.897 2 2 2h12c1.103 0 2-.897 2-2v-7h1a1 1 0 0 0 .707-1.707L12.707 2.293a.999.999 0 0 0-1.414 0L2.293 11.293A1 1 0 0 0 3 13zm9-8.414l7 7V20H5v-7.414l7-7z"/><path d="M6 10h3v8H6zm9 0h3v8h-3z"/></svg>
+          Overview
+        </a>
+        <a href="#" class="nav-item" data-tab="crm" id="nav-crm">
+          <svg class="nav-icon" viewBox="0 0 24 24" width="18" height="18"><path d="M19 3H5c-1.103 0-2 .897-2 2v14c0 1.103.897 2 2 2h14c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+          CRM Pipeline
+        </a>
+        <a href="#" class="nav-item" data-tab="opportunities" id="nav-opps">
+          <svg class="nav-icon" viewBox="0 0 24 24" width="18" height="18"><path d="M20 3H4c-1.103 0-2 .897-2 2v14c0 1.103.897 2 2 2h16c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2zM4 19V7h16v12H4z"/><path d="M10 10h4v2h-4zm0 4h4v2h-4z"/></svg>
+          Opportunities
+        </a>
+        <a href="#" class="nav-item" data-tab="outreach" id="nav-outreach">
+          <svg class="nav-icon" viewBox="0 0 24 24" width="18" height="18"><path d="M20 4H4c-1.103 0-2 .897-2 2v12c0 1.103.897 2 2 2h16c1.103 0 2-.897 2-2V6c0-1.103-.897-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+          Outreach Logs
+        </a>
+        <a href="#" class="nav-item" data-tab="console" id="nav-console">
+          <svg class="nav-icon" viewBox="0 0 24 24" width="18" height="18"><path d="M20 4H4c-1.103 0-2 .897-2 2v12c0 1.103.897 2 2 2h16c1.103 0 2-.897 2-2V6c0-1.103-.897-2-2-2zM4 18V6h16v12H4z"/><path d="m8.293 8.707 1.414 1.414L7.414 12l2.293 2.293-1.414 1.414L4.586 12zM10 13h6v2h-6z"/></svg>
+          Live Console
+        </a>
+        <a href="#" class="nav-item" data-tab="settings" id="nav-settings">
+          <svg class="nav-icon" viewBox="0 0 24 24" width="18" height="18"><path d="m2.344 15.271 2 3.46c.58.17 1.25.07 1.77-.27l1.79-1.15a8.777 8.777 0 0 0 2.25 1.3l.28 2.11c.11.66.69 1.15 1.36 1.15h4c.67 0 1.25-.49 1.36-1.15l.28-2.11a8.887 8.887 0 0 0 2.25-1.3l1.79 1.15c.52.34 1.19.44 1.77.27l2-3.46a1.377 1.377 0 0 0-.29-1.57l-1.68-1.43a9.031 9.031 0 0 0 0-2.61l1.68-1.43a1.378 1.378 0 0 0 .29-1.57l-2-3.46c-.58-.17-1.25-.07-1.77.27l-1.79 1.15a8.777 8.777 0 0 0-2.25-1.3l-.28-2.11C15.25 2.49 14.67 2 14 2h-4c-.67 0-1.25.49-1.36 1.15l-.28 2.11a8.887 8.887 0 0 0-2.25 1.3L4.32 5.41c-.52-.34-1.19-.44-1.77-.27l-2 3.46a1.377 1.377 0 0 0 .29 1.57l1.68 1.43c-.05.43-.08.87-.08 1.3s.03.87.08 1.3l-1.68 1.43a1.377 1.377 0 0 0-.29 1.57zM12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8z"/></svg>
+          Settings
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button id="btn-manual-trigger" class="btn btn-primary btn-run-pipeline">
+          <span class="btn-text">Run Discovery Now</span>
+          <span class="btn-spinner hidden"></span>
+        </button>
+        <div id="pipeline-status-indicator" class="status-indicator">
+          <span class="status-dot green"></span> System Idle
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <header class="top-header">
+        <div class="header-title">
+          <h1 id="page-title">Dashboard Overview</h1>
+          <p id="page-subtitle">Fanusta Design-Build Partner Sales Agent</p>
+        </div>
+        <div class="header-actions">
+          <a href="/api/download/excel" class="btn btn-secondary" style="text-decoration: none;" download>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="vertical-align: middle; margin-right: 6px;"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            Download Excel DB
+          </a>
+          <div class="time-widget">
+            <span class="time-label">Current Time IST:</span>
+            <span id="current-time-ist" class="time-val">08:00 AM</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- TAB content: OVERVIEW -->
+      <section id="tab-overview" class="tab-pane active">
+        <!-- Stat Cards Grid -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-label">Total Discovered</span>
+              <span class="stat-icon-wrap blue">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8z"/><path d="M11 11h2v6h-2zm0-4h2v2h-2z"/></svg>
+              </span>
+            </div>
+            <div id="stat-total-discovered" class="stat-value">0</div>
+            <div class="stat-subtext">Opportunities found in news</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-label">Shortlisted (>70)</span>
+              <span class="stat-icon-wrap green">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="m10 15.586-3.293-3.293-1.414 1.414L10 18.414l9-9-1.414-1.414z"/></svg>
+              </span>
+            </div>
+            <div id="stat-total-qualified" class="stat-value">0</div>
+            <div class="stat-subtext">Viable design-fit projects</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-label">Decision Makers</span>
+              <span class="stat-icon-wrap purple">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M16.604 11.048a5.654 5.654 0 0 0-4.604-3.048V5a3 3 0 0 0-6 0v3c0 .878-.076 1.748-.225 2.586A5.56 5.56 0 0 0 2 16v2a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2a5.56 5.56 0 0 0-3.396-4.952zM12 9.5a1.5 1.5 0 0 1 1.5 1.5v1h-3v-1A1.5 1.5 0 0 1 12 9.5zM7.5 5a1 1 0 0 1 2 0v3h-2V5zm.315 12c.394-1.725 1.93-3 3.765-3a3.86 3.86 0 0 1 1.849.467A3.56 3.56 0 0 1 14 16H4c0-.773.315-1.41.815-1.921A3.56 3.56 0 0 1 7.815 17z"/></svg>
+              </span>
+            </div>
+            <div id="stat-total-contacts" class="stat-value">0</div>
+            <div class="stat-subtext">Identified verified managers</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-label">Outreach Emails</span>
+              <span class="stat-icon-wrap orange">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M2.002 9.63c.023.411.207.794.502 1.072l8.2 7.67c.367.343.834.514 1.302.514s.935-.171 1.302-.514l8.2-7.67c.295-.278.479-.661.502-1.072v-.039c-.01-.376-.156-.738-.415-1.012l-1.054-1.116A1.99 1.99 0 0 0 18.06 6H5.942a1.99 1.99 0 0 0-1.482.688L3.407 7.804c-.259.274-.405.636-.415 1.012v.039z"/><path d="M4 12v6c0 1.103.897 2 2 2h12c1.103 0 2-.897 2-2v-6l-8 7.5L4 12z"/></svg>
+              </span>
+            </div>
+            <div id="stat-total-emails" class="stat-value">0</div>
+            <div class="stat-subtext">Personalized sent outbox</div>
+          </div>
+        </div>
+
+        <div class="dashboard-body">
+          <div class="recent-panel card">
+            <h2 class="section-title">Active Campaign Summary</h2>
+            <div class="summary-details">
+              <p>Fanusta’s outreach system operates daily to find commercial hospitality projects across India.</p>
+              <div class="settings-banner">
+                <div>
+                  <strong>Active Scheduler:</strong> Daily at <span id="summary-run-time">08:00 AM IST</span>
+                </div>
+                <div>
+                  <strong>Mode:</strong> <span id="summary-mock-mode" class="badge">Mock Mode</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="recent-panel card">
+            <h2 class="section-title">Pipeline Health</h2>
+            <div class="pipeline-chart-container">
+              <div class="pipeline-progress-bar">
+                <div id="chart-bar-not-contacted" class="p-segment blue" style="width: 0%"></div>
+                <div id="chart-bar-contacted" class="p-segment orange" style="width: 0%"></div>
+                <div id="chart-bar-replied" class="p-segment green" style="width: 0%"></div>
+                <div id="chart-bar-meeting" class="p-segment purple" style="width: 0%"></div>
+                <div id="chart-bar-closed" class="p-segment gray" style="width: 0%"></div>
+              </div>
+              <div class="pipeline-legend">
+                <span class="legend-item"><span class="legend-dot blue"></span> Not Contacted (<span id="count-not-contacted">0</span>)</span>
+                <span class="legend-item"><span class="legend-dot orange"></span> Contacted (<span id="count-contacted">0</span>)</span>
+                <span class="legend-item"><span class="legend-dot green"></span> Replied (<span id="count-replied">0</span>)</span>
+                <span class="legend-item"><span class="legend-dot purple"></span> Meeting Scheduled (<span id="count-meeting">0</span>)</span>
+                <span class="legend-item"><span class="legend-dot gray"></span> Closed (<span id="count-closed">0</span>)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB content: CRM KANBAN BOARD -->
+      <section id="tab-crm" class="tab-pane">
+        <div class="kanban-board">
+          <!-- Column 1: Not Contacted -->
+          <div class="kanban-column" id="col-not-contacted">
+            <div class="kanban-column-header">
+              <h3>Not Contacted</h3>
+              <span class="kanban-count count-badge">0</span>
+            </div>
+            <div class="kanban-cards-container" data-status="Not Contacted"></div>
+          </div>
+          <!-- Column 2: Contacted -->
+          <div class="kanban-column" id="col-contacted">
+            <div class="kanban-column-header">
+              <h3>Contacted</h3>
+              <span class="kanban-count count-badge">0</span>
+            </div>
+            <div class="kanban-cards-container" data-status="Contacted"></div>
+          </div>
+          <!-- Column 3: Replied -->
+          <div class="kanban-column" id="col-replied">
+            <div class="kanban-column-header">
+              <h3>Replied</h3>
+              <span class="kanban-count count-badge">0</span>
+            </div>
+            <div class="kanban-cards-container" data-status="Replied"></div>
+          </div>
+          <!-- Column 4: Meeting Scheduled -->
+          <div class="kanban-column" id="col-meeting">
+            <div class="kanban-column-header">
+              <h3>Meeting Scheduled</h3>
+              <span class="kanban-count count-badge">0</span>
+            </div>
+            <div class="kanban-cards-container" data-status="Meeting Scheduled"></div>
+          </div>
+          <!-- Column 5: Closed -->
+          <div class="kanban-column" id="col-closed">
+            <div class="kanban-column-header">
+              <h3>Closed / Lost</h3>
+              <span class="kanban-count count-badge">0</span>
+            </div>
+            <div class="kanban-cards-container" data-status="Opportunity Closed"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB content: OPPORTUNITIES LIST -->
+      <section id="tab-opportunities" class="tab-pane">
+        <div class="table-container card">
+          <div class="table-actions">
+            <h2>Discovered Hospitality Projects</h2>
+            <div class="filters">
+              <select id="filter-type" class="form-control">
+                <option value="all">All Project Types</option>
+                <option value="New Development">New Development</option>
+                <option value="Renovation">Renovation</option>
+                <option value="Expansion">Expansion</option>
+                <option value="Brand Upgrade">Brand Upgrade</option>
+              </select>
+              <select id="filter-status" class="form-control">
+                <option value="all">All Scores</option>
+                <option value="shortlisted">Shortlisted (>70)</option>
+                <option value="disqualified">Disqualified (<70)</option>
+              </select>
+            </div>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Property Details</th>
+                <th>Brand / Group</th>
+                <th>Location</th>
+                <th>Type</th>
+                <th style="text-align:center;">Score</th>
+                <th>Qualification / Timeline</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="opps-table-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB content: OUTREACH OUTBOX LOGS -->
+      <section id="tab-outreach" class="tab-pane">
+        <div class="table-container card">
+          <h2>Outreach Communication Log</h2>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date Sent</th>
+                <th>Recipient Contact</th>
+                <th>Company</th>
+                <th>Email Address</th>
+                <th>Version</th>
+                <th>Subject Line</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="outreach-table-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB content: LIVE AGENT LOGS CONSOLE -->
+      <section id="tab-console" class="tab-pane">
+        <div class="console-card card">
+          <div class="console-header">
+            <div class="console-title">
+              <span class="live-blink"></span> Agent Output Console
+            </div>
+            <div class="console-actions">
+              <button id="btn-clear-logs" class="btn btn-secondary">Clear Console</button>
+            </div>
+          </div>
+          <div class="console-body" id="console-logs-output">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB content: SYSTEM CONFIGURATION SETTINGS -->
+      <section id="tab-settings" class="tab-pane">
+        <div class="settings-grid">
+          <div class="card settings-card">
+            <h2>AI Agent Configuration</h2>
+            <form id="form-settings-ai">
+              <div class="form-group">
+                <label for="setting-gemini-key">Google Gemini API Key</label>
+                <input type="password" id="setting-gemini-key" class="form-control" placeholder="AIzaSy...">
+                <p class="field-help">Required to run the analysis, decision extraction, and outreach generation.</p>
+              </div>
+              <div class="form-group">
+                <label for="setting-score-threshold">Opportunity Qualification Threshold</label>
+                <input type="number" id="setting-score-threshold" class="form-control" min="50" max="95" value="70">
+                <p class="field-help">Minimum score (1-100) required to shortlist an opportunity (default is 70).</p>
+              </div>
+              <button type="submit" class="btn btn-primary">Save AI Settings</button>
+            </form>
+          </div>
+
+          <div class="card settings-card">
+            <h2>SMTP Email Settings</h2>
+            <form id="form-settings-smtp">
+              <div class="form-group row-inline">
+                <div class="checkbox-wrapper">
+                  <input type="checkbox" id="setting-mock-mode" checked>
+                  <label for="setting-mock-mode">Enable Mock Mode</label>
+                </div>
+              </div>
+              <p class="field-help warning-help">When Mock Mode is enabled, the agent generates drafts but writes them to the DB log instead of sending real emails. Untick to send real emails via SMTP.</p>
+              
+              <div class="form-group">
+                <label for="setting-smtp-host">SMTP Host</label>
+                <input type="text" id="setting-smtp-host" class="form-control" value="smtp.gmail.com">
+              </div>
+              <div class="form-group">
+                <label for="setting-smtp-port">SMTP Port</label>
+                <input type="text" id="setting-smtp-port" class="form-control" value="465">
+              </div>
+              <div class="form-group">
+                <label for="setting-smtp-user">SMTP Username (Gmail Address)</label>
+                <input type="email" id="setting-smtp-user" class="form-control" placeholder="user@gmail.com">
+              </div>
+              <div class="form-group">
+                <label for="setting-smtp-pass">SMTP Password (Gmail App Password)</label>
+                <input type="password" id="setting-smtp-pass" class="form-control" placeholder="abcd efgh ijkl mnop">
+              </div>
+              <button type="submit" class="btn btn-primary">Save Email Settings</button>
+            </form>
+          </div>
+
+          <div class="card settings-card">
+            <h2>Campaign Parameters</h2>
+            <form id="form-settings-campaign">
+              <div class="form-group">
+                <label for="setting-sender-name">Outreach Sender Name</label>
+                <input type="text" id="setting-sender-name" class="form-control" value="Dinesh Raut | Fanusta">
+              </div>
+              <div class="form-group">
+                <label for="setting-sender-email">Outreach Sender Email</label>
+                <input type="email" id="setting-sender-email" class="form-control" placeholder="dinesh.raut@fanusta.com">
+              </div>
+              <div class="form-group">
+                <label for="setting-recipient">Summary Report Recipient Email</label>
+                <input type="email" id="setting-recipient" class="form-control" value="dinesh@fanusta.com">
+                <p class="field-help">Recipient for the daily 8:00 AM IST performance digest report.</p>
+              </div>
+              <div class="form-group">
+                <label for="setting-run-time">Daily Run Time (IST)</label>
+                <input type="time" id="setting-run-time" class="form-control" value="08:00">
+                <p class="field-help">Time of day to run the automated opportunity pipeline daily.</p>
+              </div>
+              <div class="form-group">
+                <label for="setting-limit">Daily Outreach Limit</label>
+                <input type="number" id="setting-limit" class="form-control" min="1" max="25" value="5">
+                <p class="field-help">Maximum number of outbound emails sent per day (default is 5).</p>
+              </div>
+              <button type="submit" class="btn btn-primary">Save Parameters</button>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Email Preview Modal -->
+  <div id="email-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-email-subject">Email Subject Line</h3>
+        <button id="btn-close-modal" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-meta">
+        <div><strong>To:</strong> <span id="modal-email-to">email@hotel.com</span></div>
+        <div><strong>Recipient:</strong> <span id="modal-email-name">John Doe</span></div>
+        <div><strong>Version:</strong> <span id="modal-email-version" class="badge">Corporate</span></div>
+      </div>
+      <div class="modal-body">
+        <div id="modal-email-body" class="email-body-text"></div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- App JS Scripts -->
+  <script src="app.js"></script>
+</body>
+</html>
