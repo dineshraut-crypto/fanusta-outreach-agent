@@ -38,7 +38,8 @@ const DEFAULTS = {
     mock_mode: true,
     run_time: '08:00',
     opportunity_score_threshold: 70,
-    daily_outreach_limit: 5
+    daily_outreach_limit: 5,
+    google_sheet_webhook: ''
   }
 };
 

@@ -510,6 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('setting-recipient').value = s.summary_recipient || 'dinesh@fanusta.com';
       document.getElementById('setting-run-time').value = s.run_time || '08:00';
       document.getElementById('setting-limit').value = s.daily_outreach_limit || 5;
+      document.getElementById('setting-sheet-webhook').value = s.google_sheet_webhook || '';
 
     } catch (e) {
       console.error(e);
@@ -544,7 +545,8 @@ document.addEventListener('DOMContentLoaded', () => {
       sender_email: document.getElementById('setting-sender-email').value,
       summary_recipient: document.getElementById('setting-recipient').value,
       run_time: document.getElementById('setting-run-time').value,
-      daily_outreach_limit: parseInt(document.getElementById('setting-limit').value)
+      daily_outreach_limit: parseInt(document.getElementById('setting-limit').value),
+      google_sheet_webhook: document.getElementById('setting-sheet-webhook').value
     };
     await saveSettings(payload);
   });

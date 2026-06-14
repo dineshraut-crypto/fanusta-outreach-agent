@@ -363,6 +363,11 @@
                 <input type="number" id="setting-limit" class="form-control" min="1" max="25" value="5">
                 <p class="field-help">Maximum number of outbound emails sent per day (default is 5).</p>
               </div>
+              <div class="form-group">
+                <label for="setting-sheet-webhook">Google Sheet Web App URL</label>
+                <input type="url" id="setting-sheet-webhook" class="form-control" placeholder="https://script.google.com/macros/s/.../exec">
+                <p class="field-help">Google Apps Script Web App URL to sync qualified leads to Google Sheets automatically.</p>
+              </div>
               <button type="submit" class="btn btn-primary">Save Parameters</button>
             </form>
           </div>

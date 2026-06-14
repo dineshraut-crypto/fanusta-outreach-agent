@@ -61,6 +61,14 @@ export async function runPipelineWorkflow() {
       db.addOpportunity(finalOpp);
       runStats.discoveredOpps.push(finalOpp);
       
+      // Sync to Google Sheets if configured and shortlisted
+      if (finalOpp.status === 'shortlisted') {
+        const settings = db.getSettings();
+        if (settings.google_sheet_webhook) {
+          await syncToGoogleSheets(finalOpp, processedContacts, settings.google_sheet_webhook);
+        }
+      }
+      
       // Delay to avoid request bursts
       await new Promise(r => setTimeout(r, 1000));
     }
@@ -95,4 +103,69 @@ export async function runPipelineWorkflow() {
 
 export function getWorkflowStatus() {
   return isRunning;
+}
+
+/**
+ * Syncs a qualified lead opportunity and its contacts to Google Sheets via Webhook.
+ */
+async function syncToGoogleSheets(opp, contacts, webhookUrl) {
+  db.addLog(`Syncing ${opp.propertyName} to Google Sheets...`, 'info');
+  
+  const payloadRows = [];
+  if (contacts.length === 0) {
+    payloadRows.push({
+      propertyName: opp.propertyName,
+      hotelGroup: opp.hotelGroup,
+      city: opp.city,
+      state: opp.state,
+      projectType: opp.projectType,
+      expectedTimeline: opp.expectedTimeline,
+      overallScore: opp.qualificationScore?.overallScore || 'N/A',
+      contactName: 'No contacts identified yet',
+      designation: '',
+      role: '',
+      email: '',
+      linkedIn: '',
+      outreachStatus: 'Not Contacted',
+      reasoning: opp.qualificationScore?.reasoning || '',
+      sourceUrl: opp.sourceUrl
+    });
+  } else {
+    contacts.forEach(contact => {
+      payloadRows.push({
+        propertyName: opp.propertyName,
+        hotelGroup: opp.hotelGroup,
+        city: opp.city,
+        state: opp.state,
+        projectType: opp.projectType,
+        expectedTimeline: opp.expectedTimeline,
+        overallScore: opp.qualificationScore?.overallScore || 'N/A',
+        contactName: contact.fullName,
+        designation: contact.designation,
+        role: contact.role,
+        email: contact.email || 'Not Discovered',
+        linkedIn: contact.linkedIn || 'Not Discovered',
+        outreachStatus: contact.outreachStatus || 'Not Contacted',
+        reasoning: opp.qualificationScore?.reasoning || '',
+        sourceUrl: opp.sourceUrl
+      });
+    });
+  }
+
+  for (const row of payloadRows) {
+    try {
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(row)
+      });
+      if (!response.ok) {
+        db.addLog(`Google Sheets webhook returned error: ${response.statusText}`, 'warn');
+      } else {
+        db.addLog(`Google Sheets sync successful for contact: ${row.contactName}`, 'info');
+      }
+    } catch (err) {
+      db.addLog(`Google Sheets sync failed: ${err.message}`, 'warn');
+    }
+  }
 }
