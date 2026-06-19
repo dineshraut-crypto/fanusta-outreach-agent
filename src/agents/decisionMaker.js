@@ -1,48 +1,110 @@
 import { db } from '../database.js';
 import { callGemini } from '../ai.js';
 
+const USER_AGENTS = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/120.0.0.0 Safari/537.36'
+];
+
 /**
- * Helper to perform a DuckDuckGo HTML search and scrape results.
- * Code duplicated or imported to ensure isolation.
+ * Helper to perform a DuckDuckGo search (HTML or Lite version) and scrape results.
+ * Handles rate limits, retries, and User-Agent rotation.
  */
 async function searchDuckDuckGo(query) {
-  const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      }
-    });
+  const ua = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+  const endpoints = [
+    {
+      name: 'html',
+      url: `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
+      parse: ($) => {
+        const results = [];
+        $('.result').each((i, element) => {
+          const titleEl = $(element).find('.result__a');
+          const snippetEl = $(element).find('.result__snippet');
+          const title = titleEl.text().trim();
+          const link = titleEl.attr('href');
+          const snippet = snippetEl.text().trim();
 
-    if (!response.ok) return [];
-
-    const text = await response.text();
-    const cheerio = await import('cheerio');
-    const $ = cheerio.load(text);
-    const results = [];
-
-    $('.result').each((i, element) => {
-      const title = $(element).find('.result__a').text().trim();
-      const link = $(element).find('.result__a').attr('href');
-      const snippet = $(element).find('.result__snippet').text().trim();
-
-      if (title && link) {
-        let cleanLink = link;
-        if (link.includes('uddg=')) {
-          const parts = link.split('uddg=');
-          if (parts[1]) {
-            cleanLink = decodeURIComponent(parts[1].split('&')[0]);
+          if (title && link) {
+            let cleanLink = link;
+            if (link.includes('uddg=')) {
+              const parts = link.split('uddg=');
+              if (parts[1]) {
+                cleanLink = decodeURIComponent(parts[1].split('&')[0]);
+              }
+            }
+            results.push({ title, link: cleanLink, snippet });
           }
-        }
-        results.push({ title, link: cleanLink, snippet });
+        });
+        return results;
       }
-    });
+    },
+    {
+      name: 'lite',
+      url: `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(query)}`,
+      parse: ($) => {
+        const results = [];
+        $('.result-link').each((i, element) => {
+          const title = $(element).text().trim();
+          const link = $(element).attr('href');
+          const parentRow = $(element).closest('tr');
+          const nextRow = parentRow.next();
+          const snippetTd = nextRow.find('.result-snippet');
+          const snippet = snippetTd.length > 0 ? snippetTd.text().trim() : nextRow.text().trim();
 
-    return results;
-  } catch (error) {
-    db.addLog(`DDG search error in decision maker extraction: ${error.message}`, 'error');
-    return [];
+          if (title && link) {
+            let cleanLink = link;
+            if (link.startsWith('//')) {
+              cleanLink = 'https:' + link;
+            }
+            if (cleanLink.includes('uddg=')) {
+              const parts = cleanLink.split('uddg=');
+              if (parts[1]) {
+                cleanLink = decodeURIComponent(parts[1].split('&')[0]);
+              }
+            }
+            results.push({ title, link: cleanLink, snippet: snippet.replace(/\s+/g, ' ') });
+          }
+        });
+        return results;
+      }
+    }
+  ];
+
+  let lastError = null;
+
+  for (const endpoint of endpoints) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const response = await fetch(endpoint.url, {
+          headers: { 'User-Agent': ua }
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const html = await response.text();
+        const cheerio = await import('cheerio');
+        const $ = cheerio.load(html);
+        const results = endpoint.parse($);
+
+        if (results.length > 0) {
+          return results;
+        }
+      } catch (error) {
+        lastError = error;
+        db.addLog(`DuckDuckGo (${endpoint.name}) search attempt ${attempt} failed: ${error.message}`, 'warn');
+        await new Promise(r => setTimeout(r, 1500));
+      }
+    }
   }
+
+  db.addLog(`All DuckDuckGo search endpoints failed in decision maker extraction. Last error: ${lastError ? lastError.message : 'N/A'}`, 'error');
+  return [];
 }
 
 /**
