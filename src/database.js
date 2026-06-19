@@ -158,7 +158,23 @@ export const db = {
 
   // Settings CRUD
   getSettings() {
-    return readJson('settings');
+    const fileSettings = readJson('settings');
+    return {
+      gemini_api_key: process.env.GEMINI_API_KEY || fileSettings.gemini_api_key || '',
+      smtp_host: process.env.SMTP_HOST || fileSettings.smtp_host || 'smtp.gmail.com',
+      smtp_port: process.env.SMTP_PORT || fileSettings.smtp_port || '465',
+      smtp_secure: process.env.SMTP_SECURE !== undefined ? (process.env.SMTP_SECURE === 'true') : (fileSettings.smtp_secure !== false),
+      smtp_user: process.env.SMTP_USER || fileSettings.smtp_user || '',
+      smtp_pass: process.env.SMTP_PASS || fileSettings.smtp_pass || '',
+      sender_name: process.env.SENDER_NAME || fileSettings.sender_name || 'Dinesh Raut | Fanusta',
+      sender_email: process.env.SENDER_EMAIL || fileSettings.sender_email || '',
+      summary_recipient: process.env.SUMMARY_RECIPIENT || fileSettings.summary_recipient || 'dinesh@fanusta.com',
+      mock_mode: process.env.MOCK_MODE !== undefined ? (process.env.MOCK_MODE === 'true') : (fileSettings.mock_mode !== false),
+      run_time: process.env.RUN_TIME || fileSettings.run_time || '08:00',
+      opportunity_score_threshold: process.env.OPPORTUNITY_SCORE_THRESHOLD ? parseInt(process.env.OPPORTUNITY_SCORE_THRESHOLD) : (fileSettings.opportunity_score_threshold || 70),
+      daily_outreach_limit: process.env.DAILY_OUTREACH_LIMIT ? parseInt(process.env.DAILY_OUTREACH_LIMIT) : (fileSettings.daily_outreach_limit || 5),
+      google_sheet_webhook: process.env.GOOGLE_SHEET_WEBHOOK || fileSettings.google_sheet_webhook || ''
+    };
   },
   saveSettings(settings) {
     const current = this.getSettings();
