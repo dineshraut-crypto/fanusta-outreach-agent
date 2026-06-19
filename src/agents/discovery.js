@@ -8,9 +8,7 @@ const parser = new Parser();
 // RSS Feeds to monitor
 const FEEDS = [
   { name: 'ET Hospitality', url: 'https://hospitality.economictimes.indiatimes.com/rss/topstories' },
-  { name: 'Hotelier India', url: 'https://www.hotelierindia.com/feed' },
-  { name: 'Hotelier India Design', url: 'https://www.hotelierindia.com/design/feed' },
-  { name: 'Hospitality Net', url: 'https://www.hospitalitynet.org/feed/news.xml' }
+  { name: 'Construction Week India', url: 'https://www.constructionweekonline.in/feed' }
 ];
 
 // Search queries for DuckDuckGo
@@ -180,53 +178,11 @@ function filterExisting(items) {
  * Discovers hospitality opportunities.
  * Returns a list of structured opportunities.
  */
-export async function discoverOpportunities() {
-  db.addLog('Starting Opportunity Discovery Agent (Agent 1)...', 'info');
-
-  // 1. Gather all candidates from RSS and DuckDuckGo
-  const rssItems = await fetchRssFeeds();
-  db.addLog(`Fetched ${rssItems.length} news items from RSS feeds.`, 'info');
-
-  const searchItems = [];
-  for (const query of SEARCH_QUERIES) {
-    db.addLog(`Searching DuckDuckGo for: "${query}"...`, 'info');
-    const results = await searchDuckDuckGo(query);
-    db.addLog(`Found ${results.length} results.`, 'info');
-    searchItems.push(...results);
-    // Be polite to DDG
-    await new Promise(r => setTimeout(r, 1500));
-  }
-
-  const allCandidates = [...rssItems, ...searchItems];
-  
-  // Deduplicate by URL
-  const uniqueCandidates = [];
-  const seenUrls = new Set();
-  for (const c of allCandidates) {
-    if (c.link && !seenUrls.has(c.link)) {
-      seenUrls.add(c.link);
-      uniqueCandidates.push(c);
-    }
-  }
-
-  // Filter out already discovered
-  const newCandidates = filterExisting(uniqueCandidates);
-  db.addLog(`Found ${newCandidates.length} new candidates to analyze after deduplication.`, 'info');
-
-  if (newCandidates.length === 0) {
-    db.addLog('No new candidates found to analyze.', 'info');
-    return [];
-  }
-
-  // Slice candidates to process in batches of 10 to avoid token overload
-  const batchSize = 10;
-  const discoveredOpportunities = [];
-
-  for (let i = 0; i < newCandidates.length && i < 50; i += batchSize) {
-    const batch = newCandidates.slice(i, i + batchSize);
-    db.addLog(`Analyzing candidate batch ${Math.floor(i/batchSize) + 1}...`, 'info');
-
-    const prompt = `
+/**
+ * Helper to extract opportunities from a batch of candidate snippets.
+ */
+async function extractOppsFromBatch(batch) {
+  const prompt = `
 You are the Discovery Agent for Fanusta, a design-build interior contractor in India.
 Analyze the following list of news articles and search snippets and identify any hospitality-related projects (hotels, resorts, boutique hotels, luxury villas, hotel chains) under planning, construction, expansion, rebranding, or renovation in India.
 
@@ -269,24 +225,195 @@ Example Response:
 ]
 `;
 
-    try {
-      const responseText = await callGemini(prompt, 'You are an elite hospitality research analyst. Your output must be a valid, parseable JSON array.', true);
-      const parsed = JSON.parse(responseText.trim());
-      
-      if (Array.isArray(parsed)) {
-        parsed.forEach(opp => {
-          // Verify URL is set correctly from the source
-          const matchingSource = batch.find(b => b.link === opp.sourceUrl) || batch[0];
-          opp.sourceUrl = opp.sourceUrl || matchingSource.link;
-          discoveredOpportunities.push(opp);
-          db.addLog(`Discovered opportunity: ${opp.propertyName} in ${opp.city}, ${opp.state} (${opp.projectType})`, 'info');
-        });
-      }
-    } catch (error) {
-      db.addLog(`Failed to parse AI response for discovery batch: ${error.message}`, 'error');
+  try {
+    const responseText = await callGemini(prompt, 'You are an elite hospitality research analyst. Your output must be a valid, parseable JSON array.', true);
+    let cleanText = responseText.trim();
+    if (cleanText.includes('```json')) {
+      cleanText = cleanText.split('```json')[1].split('```')[0];
+    } else if (cleanText.includes('```')) {
+      cleanText = cleanText.split('```')[1].split('```')[0];
+    }
+    const parsed = JSON.parse(cleanText.trim());
+    
+    if (Array.isArray(parsed)) {
+      const results = [];
+      parsed.forEach(opp => {
+        const matchingSource = batch.find(b => b.link === opp.sourceUrl) || batch[0];
+        opp.sourceUrl = opp.sourceUrl || matchingSource.link;
+        results.push(opp);
+        db.addLog(`Discovered opportunity: ${opp.propertyName} in ${opp.city}, ${opp.state} (${opp.projectType})`, 'info');
+      });
+      return results;
+    }
+  } catch (error) {
+    db.addLog(`Failed to parse AI response for discovery batch: ${error.message}`, 'error');
+  }
+  return [];
+}
+
+/**
+ * Discovers hospitality opportunities using direct Google Search grounding.
+ */
+async function discoverOpportunitiesViaGoogleSearch(apiKey) {
+  const model = 'gemini-2.5-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const prompt = `
+  Using Google Search, find recent hospitality projects, hotel openings, resort developments, or renovations announced in India for 2026.
+  Provide a list of 5-10 real projects.
+  For each project, return:
+  - "propertyName": Name of hotel/resort
+  - "hotelGroup": Parent brand/group (e.g. "Marriott", "Taj", "IHG", "Independent")
+  - "city": Located city in India
+  - "state": Located state in India
+  - "projectType": Must be exactly one of: "New Development", "Renovation", "Expansion", "Brand Upgrade"
+  - "expectedTimeline": Timeline details (e.g. "Immediate", "Opening late 2026", "TBD")
+  - "sourceUrl": The source URL where this news was found
+  - "description": A brief summary of the project details
+  - "initialDiscoveryScore": An integer from 1-10 assessing viability as an interior project based on scale, luxury level, and location.
+  
+  Format your response as a valid JSON array of objects. Do not include markdown codeblocks or wrapper text. Just output a valid JSON array.
+  `;
+
+  try {
+    db.addLog("Searching the web for new projects using Google Search Grounding...", "info");
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        tools: [{ google_search: {} }]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error ${response.status}`);
+    }
+
+    const result = await response.json();
+    let textResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!textResponse) {
+      throw new Error("No text response received from grounding");
+    }
+
+    if (textResponse.includes('```json')) {
+      textResponse = textResponse.split('```json')[1].split('```')[0];
+    } else if (textResponse.includes('```')) {
+      textResponse = textResponse.split('```')[1].split('```')[0];
+    }
+
+    const parsed = JSON.parse(textResponse.trim());
+    if (Array.isArray(parsed)) {
+      parsed.forEach(opp => {
+        db.addLog(`Directly Discovered opportunity (via Grounding): ${opp.propertyName} in ${opp.city}, ${opp.state} (${opp.projectType})`, 'info');
+      });
+      return parsed;
+    }
+    return [];
+  } catch (error) {
+    db.addLog(`Google Search Grounding failed: ${error.message}. Falling back to DuckDuckGo...`, 'warn');
+    return [];
+  }
+}
+
+/**
+ * Filter out opportunities that are already tracked in the database by propertyName + city.
+ */
+function filterExistingOpportunities(opps) {
+  const existingOpps = db.getOpportunities();
+  const existingKeys = new Set(existingOpps.map(o => `${o.propertyName.toLowerCase().trim()}_${o.city.toLowerCase().trim()}`));
+  return opps.filter(o => {
+    const key = `${o.propertyName.toLowerCase().trim()}_${o.city.toLowerCase().trim()}`;
+    return !existingKeys.has(key);
+  });
+}
+
+/**
+ * Discovers hospitality opportunities.
+ * Returns a list of structured opportunities.
+ */
+export async function discoverOpportunities() {
+  db.addLog('Starting Opportunity Discovery Agent (Agent 1)...', 'info');
+  const settings = db.getSettings();
+
+  // 1. Gather all candidates from RSS
+  const rssItems = await fetchRssFeeds();
+  db.addLog(`Fetched ${rssItems.length} news items from RSS feeds.`, 'info');
+
+  // Deduplicate RSS candidates by URL
+  const uniqueRssCandidates = [];
+  const seenUrls = new Set();
+  for (const c of rssItems) {
+    if (c.link && !seenUrls.has(c.link)) {
+      seenUrls.add(c.link);
+      uniqueRssCandidates.push(c);
     }
   }
 
-  db.addLog(`Opportunity discovery complete. Discovered ${discoveredOpportunities.length} structured opportunities.`, 'info');
-  return discoveredOpportunities;
+  // Filter out already discovered
+  const newRssCandidates = filterExisting(uniqueRssCandidates);
+  const discoveredOpportunities = [];
+
+  // Extract from RSS candidates using AI
+  if (newRssCandidates.length > 0) {
+    db.addLog(`Analyzing ${newRssCandidates.length} new RSS candidates...`, 'info');
+    const batchSize = 10;
+    for (let i = 0; i < newRssCandidates.length && i < 20; i += batchSize) {
+      const batch = newRssCandidates.slice(i, i + batchSize);
+      const extracted = await extractOppsFromBatch(batch);
+      discoveredOpportunities.push(...extracted);
+    }
+  }
+
+  // 2. Search the web (use Google Search Grounding if API Key is available, otherwise fallback to DuckDuckGo)
+  let searchOpportunities = [];
+  if (settings.gemini_api_key) {
+    searchOpportunities = await discoverOpportunitiesViaGoogleSearch(settings.gemini_api_key);
+  } else {
+    // Fallback to DuckDuckGo search
+    const searchItems = [];
+    for (const query of SEARCH_QUERIES) {
+      db.addLog(`Searching DuckDuckGo for: "${query}"...`, 'info');
+      const results = await searchDuckDuckGo(query);
+      searchItems.push(...results);
+      await new Promise(r => setTimeout(r, 1500));
+    }
+    const uniqueSearchCandidates = [];
+    for (const c of searchItems) {
+      if (c.link && !seenUrls.has(c.link)) {
+        seenUrls.add(c.link);
+        uniqueSearchCandidates.push(c);
+      }
+    }
+    const newSearchCandidates = filterExisting(uniqueSearchCandidates);
+    if (newSearchCandidates.length > 0) {
+      const batchSize = 10;
+      for (let i = 0; i < newSearchCandidates.length && i < 30; i += batchSize) {
+        const batch = newSearchCandidates.slice(i, i + batchSize);
+        const extracted = await extractOppsFromBatch(batch);
+        discoveredOpportunities.push(...extracted);
+      }
+    }
+  }
+
+  // Merge direct search opportunities
+  if (searchOpportunities.length > 0) {
+    const filteredSearchOpps = filterExistingOpportunities(searchOpportunities);
+    discoveredOpportunities.push(...filteredSearchOpps);
+  }
+
+  // Deduplicate discovered opportunities by propertyName + city
+  const finalOpps = [];
+  const seenOpps = new Set();
+  for (const opp of discoveredOpportunities) {
+    const key = `${opp.propertyName.toLowerCase().trim()}_${opp.city.toLowerCase().trim()}`;
+    if (!seenOpps.has(key)) {
+      seenOpps.add(key);
+      finalOpps.push(opp);
+    }
+  }
+
+  db.addLog(`Opportunity discovery complete. Discovered ${finalOpps.length} structured opportunities.`, 'info');
+  return finalOpps;
 }

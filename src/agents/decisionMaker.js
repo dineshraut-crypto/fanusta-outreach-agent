@@ -108,6 +108,76 @@ async function searchDuckDuckGo(query) {
 }
 
 /**
+ * Identifies decision makers using direct Google Search grounding.
+ */
+async function identifyDecisionMakersViaGoogleSearch(opportunity, apiKey) {
+  const { propertyName, hotelGroup, city, state } = opportunity;
+  const model = 'gemini-2.5-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const prompt = `
+  Using Google Search, identify the decision makers (e.g. General Manager, Project Director, Procurement Head, Owner) for the hotel opportunity: "${propertyName}" located in "${city}, ${state}" (Brand/Group: "${hotelGroup}").
+  Find up to 3 real contacts.
+  For each contact, return:
+  - "fullName": First and last name of the person.
+  - "designation": Their job title/designation (e.g. "General Manager", "Director of Procurement", "Owner").
+  - "linkedIn": LinkedIn profile URL if found, otherwise "Not Discovered".
+  - "companyWebsite": The official website URL for the hotel or brand.
+  - "publicContactInfo": Email address or phone number if discovered, otherwise "Not Discovered".
+  - "confidenceScore": How certain you are ("High", "Medium", "Low").
+  - "role": Must be mapped to one of: "General Manager", "Procurement Head", "Projects Head", "Engineering Head", "Development Head", "Owner Representative", "Corporate Procurement Manager".
+  
+  Do not fabricate details. Only return real people mentioned in public search results.
+  Format your response as a valid JSON array of objects. Do not include markdown codeblocks or wrapper text. Just output a valid JSON array.
+  `;
+
+  try {
+    db.addLog(`Searching the web for decision makers for ${propertyName} using Google Search Grounding...`, "info");
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        tools: [{ google_search: {} }]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error ${response.status}`);
+    }
+
+    const result = await response.json();
+    let textResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!textResponse) {
+      throw new Error("No text response received from grounding");
+    }
+
+    if (textResponse.includes('```json')) {
+      textResponse = textResponse.split('```json')[1].split('```')[0];
+    } else if (textResponse.includes('```')) {
+      textResponse = textResponse.split('```')[1].split('```')[0];
+    }
+
+    const contacts = JSON.parse(textResponse.trim());
+    if (Array.isArray(contacts)) {
+      db.addLog(`Directly Extracted (via Grounding) ${contacts.length} decision makers for ${propertyName}.`, 'info');
+      return contacts.map(c => ({
+        ...c,
+        linkedIn: c.linkedIn === 'Not Discovered' ? null : c.linkedIn,
+        email: c.publicContactInfo && c.publicContactInfo !== 'Not Discovered' && c.publicContactInfo.includes('@') ? c.publicContactInfo : null,
+        opportunityId: opportunity.id,
+        company: hotelGroup !== 'Unknown' ? hotelGroup : propertyName
+      }));
+    }
+    return [];
+  } catch (error) {
+    db.addLog(`Google Search Grounding failed for decision maker search: ${error.message}. Falling back to DuckDuckGo...`, 'warn');
+    return [];
+  }
+}
+
+/**
  * Identifies decision makers for a discovered opportunity.
  * 
  * @param {Object} opportunity Discovered opportunity details
@@ -116,8 +186,17 @@ async function searchDuckDuckGo(query) {
 export async function identifyDecisionMakers(opportunity) {
   const { propertyName, hotelGroup, city, state } = opportunity;
   db.addLog(`Finding decision makers for: ${propertyName} in ${city}...`, 'info');
+  const settings = db.getSettings();
 
-  // Build targeted search queries
+  // Try direct Google Search Grounding if API Key is available
+  if (settings.gemini_api_key) {
+    const contacts = await identifyDecisionMakersViaGoogleSearch(opportunity, settings.gemini_api_key);
+    if (contacts.length > 0) {
+      return contacts;
+    }
+  }
+
+  // Fallback to DuckDuckGo search and extraction
   const queries = [
     `"${propertyName}" "General Manager" OR "Procurement" OR "Projects" OR "Owner" India`,
     `"${propertyName}" OR "${hotelGroup} ${city}" (General Manager OR Procurement Head OR Project Director) LinkedIn`,
@@ -201,7 +280,13 @@ Example Response:
 
   try {
     const responseText = await callGemini(prompt, 'You are an elite corporate intelligence agent. Do not invent details. Output valid JSON array only.', true);
-    const contacts = JSON.parse(responseText.trim());
+    let cleanText = responseText.trim();
+    if (cleanText.includes('```json')) {
+      cleanText = cleanText.split('```json')[1].split('```')[0];
+    } else if (cleanText.includes('```')) {
+      cleanText = cleanText.split('```')[1].split('```')[0];
+    }
+    const contacts = JSON.parse(cleanText.trim());
     
     if (Array.isArray(contacts)) {
       db.addLog(`Extracted ${contacts.length} decision makers for ${propertyName}.`, 'info');
