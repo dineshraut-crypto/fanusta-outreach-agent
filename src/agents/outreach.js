@@ -3,31 +3,91 @@ import { db } from '../database.js';
 import { callGemini } from '../ai.js';
 
 /**
- * Creates a transporter for sending emails based on database settings.
+ * Sends an email using SMTP (with space sanitization) or falls back to Google Sheets Webhook.
  */
-function createTransporter(settings) {
+async function sendEmail({ to, subject, html, text, settings }) {
   if (settings.mock_mode) {
-    return {
-      sendMail: async (mailOptions) => {
-        db.addLog(`[MOCK EMAIL] To: ${mailOptions.to} | Subject: ${mailOptions.subject}`, 'info');
-        return { messageId: 'mock-id-' + Math.random().toString(36).substring(2, 9) };
-      }
-    };
+    db.addLog(`[MOCK EMAIL] To: ${to} | Subject: ${subject}`, 'info');
+    return { messageId: 'mock-id-' + Math.random().toString(36).substring(2, 9) };
   }
 
-  // Create real nodemailer transporter
-  const port = parseInt(settings.smtp_port) || 465;
-  const secure = port === 465;
+  let smtpError = null;
+  // If SMTP settings are fully configured, attempt to send via SMTP
+  if (settings.smtp_host && settings.smtp_user && settings.smtp_pass) {
+    try {
+      db.addLog(`Attempting SMTP delivery to ${to}...`, 'info');
+      const port = parseInt(settings.smtp_port) || 587;
+      const secure = port === 465;
+      
+      // Strip any spaces from password (commonly displayed as xxxx xxxx xxxx xxxx)
+      const cleanPass = settings.smtp_pass ? settings.smtp_pass.replace(/\s+/g, '') : '';
+      
+      const transporter = nodemailer.createTransport({
+        host: settings.smtp_host,
+        port: port,
+        secure: secure,
+        auth: {
+          user: settings.smtp_user,
+          pass: cleanPass
+        },
+        connectionTimeout: 10000, // 10 seconds timeout
+        greetingTimeout: 10000
+      });
 
-  return nodemailer.createTransport({
-    host: settings.smtp_host,
-    port: port,
-    secure: secure,
-    auth: {
-      user: settings.smtp_user,
-      pass: settings.smtp_pass
+      const mailOptions = {
+        from: `"${settings.sender_name}" <${settings.sender_email || settings.smtp_user}>`,
+        to: to,
+        subject: subject,
+        text: text || '',
+        html: html
+      };
+
+      const info = await transporter.sendMail(mailOptions);
+      db.addLog(`Email sent successfully via SMTP to ${to}`, 'info');
+      return { messageId: info.messageId || 'smtp-' + Date.now() };
+    } catch (err) {
+      smtpError = err;
+      db.addLog(`SMTP delivery failed: ${err.message}. Trying webhook fallback...`, 'warn');
     }
-  });
+  }
+
+  // Fallback to Google Sheets Webhook if available
+  if (settings.google_sheet_webhook) {
+    try {
+      db.addLog(`Attempting Webhook delivery to ${to}...`, 'info');
+      const response = await fetch(settings.google_sheet_webhook, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'email',
+          to: to,
+          subject: subject,
+          html: html
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const resData = await response.json();
+      if (resData.result === 'success') {
+        db.addLog(`Email sent successfully via Webhook to ${to}`, 'info');
+        return { messageId: 'webhook-' + Date.now() };
+      } else {
+        throw new Error(resData.message || 'Unknown Webhook error');
+      }
+    } catch (err) {
+      db.addLog(`Webhook email delivery failed: ${err.message}`, 'error');
+      throw new Error(`Email sending failed. SMTP: ${smtpError ? smtpError.message : 'N/A'}. Webhook: ${err.message}`);
+    }
+  }
+
+  throw new Error(
+    smtpError 
+      ? `SMTP failed: ${smtpError.message}` 
+      : 'No SMTP credentials or Google Sheet Webhook URL configured.'
+  );
 }
 
 /**
@@ -133,7 +193,6 @@ export async function runDailyOutreach() {
 
   db.addLog(`Found ${eligibleContacts.length} contacts eligible for email outreach. Daily limit is ${limit}.`, 'info');
 
-  const transporter = createTransporter(settings);
   const contactsToSend = eligibleContacts.slice(0, limit);
   const sentLogs = [];
 
@@ -147,15 +206,13 @@ export async function runDailyOutreach() {
     try {
       db.addLog(`Sending email to ${contact.fullName} (${contact.email})...`, 'info');
       
-      const mailOptions = {
-        from: `"${settings.sender_name}" <${settings.sender_email || settings.smtp_user}>`,
+      const info = await sendEmail({
         to: contact.email,
         subject: draft.subject,
-        text: draft.body, // Text fallback
-        html: draft.body.replace(/\n/g, '<br>') // Simple conversion to HTML
-      };
-
-      const info = await transporter.sendMail(mailOptions);
+        text: draft.body,
+        html: draft.body.replace(/\n/g, '<br>'),
+        settings
+      });
       
       // Update CRM
       db.updateContact(contact.id, { outreachStatus: 'Contacted' });
@@ -303,17 +360,17 @@ export async function sendDailySummaryReport(newOpps = [], newContacts = [], sen
   `;
 
   const subject = `Fanusta Daily Hospitality Pipeline Report - ${new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}`;
-  const transporter = createTransporter(settings);
 
   try {
     const recipient = settings.summary_recipient || 'dinesh@fanusta.com';
     db.addLog(`Sending Daily Summary Email to ${recipient}...`, 'info');
     
-    await transporter.sendMail({
-      from: `"${settings.sender_name}" <${settings.sender_email || settings.smtp_user}>`,
+    await sendEmail({
       to: recipient,
       subject,
-      html: reportHtml
+      text: 'Please view the HTML version of this email to see the daily hospitality pipeline report.',
+      html: reportHtml,
+      settings
     });
     db.addLog('Daily Summary Email sent successfully!', 'info');
   } catch (error) {
