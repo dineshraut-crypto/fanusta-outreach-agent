@@ -16,10 +16,13 @@ function createTransporter(settings) {
   }
 
   // Create real nodemailer transporter
+  const port = parseInt(settings.smtp_port) || 465;
+  const secure = port === 465;
+
   return nodemailer.createTransport({
     host: settings.smtp_host,
-    port: parseInt(settings.smtp_port) || 465,
-    secure: settings.smtp_secure !== false, // Default to true if port is 465
+    port: port,
+    secure: secure,
     auth: {
       user: settings.smtp_user,
       pass: settings.smtp_pass
