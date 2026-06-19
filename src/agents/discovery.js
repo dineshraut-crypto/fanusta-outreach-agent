@@ -15,10 +15,21 @@ const FEEDS = [
 
 // Search queries for DuckDuckGo
 const SEARCH_QUERIES = [
+  // 1. General search queries (announcements, openings, renovations)
   'hotel announcements India 2026 new opening',
   'resort development India project news',
   'hotel renovation refurbishment India brand upgrades',
-  'hotel management contract signed India expansion'
+  'hotel management contract signed India expansion',
+
+  // 2. Focused Domain Searches (Highly reliable alternatives to RSS feeds)
+  'site:hotelierindia.com "project" OR "signing" OR "renovation" OR "design"',
+  'site:hospitalitybizindia.com "hotel" OR "resort" OR "project" OR "signing"',
+  'site:constructionweekonline.in "hotel" OR "resort" project India',
+  'site:architectandinteriorsindia.com "hotel" OR "resort" design',
+
+  // 3. LinkedIn Post Searches for real-time announcements
+  'site:linkedin.com/posts "hotel project" OR "resort project" OR "hotel opening" India',
+  'site:linkedin.com/posts "turnkey" OR "fit out" hotel India'
 ];
 
 /**
@@ -123,7 +134,7 @@ export async function discoverOpportunities() {
     db.addLog(`Found ${results.length} results.`, 'info');
     searchItems.push(...results);
     // Be polite to DDG
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 1500));
   }
 
   const allCandidates = [...rssItems, ...searchItems];
@@ -151,7 +162,7 @@ export async function discoverOpportunities() {
   const batchSize = 10;
   const discoveredOpportunities = [];
 
-  for (let i = 0; i < newCandidates.length && i < 30; i += batchSize) {
+  for (let i = 0; i < newCandidates.length && i < 50; i += batchSize) {
     const batch = newCandidates.slice(i, i + batchSize);
     db.addLog(`Analyzing candidate batch ${Math.floor(i/batchSize) + 1}...`, 'info');
 
