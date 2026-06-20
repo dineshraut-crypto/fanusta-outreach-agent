@@ -403,17 +403,20 @@ export async function discoverOpportunities() {
     discoveredOpportunities.push(...filteredSearchOpps);
   }
 
-  // Deduplicate discovered opportunities by propertyName + city
-  const finalOpps = [];
+  // Deduplicate discovered opportunities by propertyName + city (to clean up the current run's list)
+  const uniqueOpps = [];
   const seenOpps = new Set();
   for (const opp of discoveredOpportunities) {
     const key = `${opp.propertyName.toLowerCase().trim()}_${opp.city.toLowerCase().trim()}`;
     if (!seenOpps.has(key)) {
       seenOpps.add(key);
-      finalOpps.push(opp);
+      uniqueOpps.push(opp);
     }
   }
 
-  db.addLog(`Opportunity discovery complete. Discovered ${finalOpps.length} structured opportunities.`, 'info');
+  // Filter out any opportunities that already exist in the database (by propertyName + city)
+  const finalOpps = filterExistingOpportunities(uniqueOpps);
+
+  db.addLog(`Opportunity discovery complete. Discovered ${finalOpps.length} new structured opportunities.`, 'info');
   return finalOpps;
 }
