@@ -39,7 +39,7 @@ export function exportToExcel() {
           'Expected Timeline': opp.expectedTimeline,
           'Lead Score (1-100)': opp.qualificationScore?.overallScore || 'N/A',
           'Campaign Status': opp.status === 'shortlisted' ? 'Shortlisted' : 'Disqualified',
-          'Contact Name': 'No contacts identified yet',
+          'Decision Makers': 'No contacts identified yet',
           'Designation': '',
           'Contact Role': '',
           'Email Address': '',
@@ -50,33 +50,32 @@ export function exportToExcel() {
           'Source Article URL': opp.sourceUrl
         });
       } else {
-        oppContacts.forEach(contact => {
-          // Find if any outreach was sent to this contact
+        const outreachDates = oppContacts.map(contact => {
           const contactOutreach = outreachLogs.find(o => o.contactId === contact.id) || {};
-          const outreachDate = contactOutreach.sentDate 
+          return contactOutreach.sentDate 
             ? new Date(contactOutreach.sentDate).toLocaleDateString('en-IN') 
-            : '';
+            : 'N/A';
+        }).join(', ');
 
-          rows.push({
-            'Discovery Date': new Date(opp.discoveryDate).toLocaleDateString('en-IN'),
-            'Property Name': opp.propertyName,
-            'Hotel Group': opp.hotelGroup,
-            'City': opp.city,
-            'State': opp.state,
-            'Project Type': opp.projectType,
-            'Expected Timeline': opp.expectedTimeline,
-            'Lead Score (1-100)': opp.qualificationScore?.overallScore || 'N/A',
-            'Campaign Status': opp.status === 'shortlisted' ? 'Shortlisted' : 'Disqualified',
-            'Contact Name': contact.fullName,
-            'Designation': contact.designation,
-            'Contact Role': contact.role,
-            'Email Address': contact.email || 'Not Discovered',
-            'LinkedIn Profile': contact.linkedIn || 'Not Discovered',
-            'Outreach Status': contact.outreachStatus || 'Not Contacted',
-            'Outreach Date': outreachDate,
-            'Qualification Reasoning': opp.qualificationScore?.reasoning || '',
-            'Source Article URL': opp.sourceUrl
-          });
+        rows.push({
+          'Discovery Date': new Date(opp.discoveryDate).toLocaleDateString('en-IN'),
+          'Property Name': opp.propertyName,
+          'Hotel Group': opp.hotelGroup,
+          'City': opp.city,
+          'State': opp.state,
+          'Project Type': opp.projectType,
+          'Expected Timeline': opp.expectedTimeline,
+          'Lead Score (1-100)': opp.qualificationScore?.overallScore || 'N/A',
+          'Campaign Status': opp.status === 'shortlisted' ? 'Shortlisted' : 'Disqualified',
+          'Decision Makers': oppContacts.map(c => c.fullName).join(', '),
+          'Designation': oppContacts.map(c => c.designation || 'N/A').join(', '),
+          'Contact Role': oppContacts.map(c => c.role || 'N/A').join(', '),
+          'Email Address': oppContacts.map(c => c.email || 'Not Discovered').join(', '),
+          'LinkedIn Profile': oppContacts.map(c => c.linkedIn || 'Not Discovered').join(', '),
+          'Outreach Status': oppContacts.map(c => c.outreachStatus || 'Not Contacted').join(', '),
+          'Outreach Date': outreachDates,
+          'Qualification Reasoning': opp.qualificationScore?.reasoning || '',
+          'Source Article URL': opp.sourceUrl
         });
       }
     });
@@ -95,7 +94,7 @@ export function exportToExcel() {
       { wch: 20 }, // Expected Timeline
       { wch: 18 }, // Lead Score
       { wch: 18 }, // Campaign Status
-      { wch: 25 }, // Contact Name
+      { wch: 25 }, // Decision Makers
       { wch: 25 }, // Designation
       { wch: 20 }, // Contact Role
       { wch: 30 }, // Email

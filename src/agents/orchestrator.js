@@ -111,9 +111,9 @@ export function getWorkflowStatus() {
 async function syncToGoogleSheets(opp, contacts, webhookUrl) {
   db.addLog(`Syncing ${opp.propertyName} to Google Sheets...`, 'info');
   
-  const payloadRows = [];
+  let payloadRow;
   if (contacts.length === 0) {
-    payloadRows.push({
+    payloadRow = {
       propertyName: opp.propertyName,
       hotelGroup: opp.hotelGroup,
       city: opp.city,
@@ -129,43 +129,39 @@ async function syncToGoogleSheets(opp, contacts, webhookUrl) {
       outreachStatus: 'Not Contacted',
       reasoning: opp.qualificationScore?.reasoning || '',
       sourceUrl: opp.sourceUrl
-    });
+    };
   } else {
-    contacts.forEach(contact => {
-      payloadRows.push({
-        propertyName: opp.propertyName,
-        hotelGroup: opp.hotelGroup,
-        city: opp.city,
-        state: opp.state,
-        projectType: opp.projectType,
-        expectedTimeline: opp.expectedTimeline,
-        overallScore: opp.qualificationScore?.overallScore || 'N/A',
-        contactName: contact.fullName,
-        designation: contact.designation,
-        role: contact.role,
-        email: contact.email || 'Not Discovered',
-        linkedIn: contact.linkedIn || 'Not Discovered',
-        outreachStatus: contact.outreachStatus || 'Not Contacted',
-        reasoning: opp.qualificationScore?.reasoning || '',
-        sourceUrl: opp.sourceUrl
-      });
-    });
+    payloadRow = {
+      propertyName: opp.propertyName,
+      hotelGroup: opp.hotelGroup,
+      city: opp.city,
+      state: opp.state,
+      projectType: opp.projectType,
+      expectedTimeline: opp.expectedTimeline,
+      overallScore: opp.qualificationScore?.overallScore || 'N/A',
+      contactName: contacts.map(c => c.fullName).join(', '),
+      designation: contacts.map(c => c.designation || 'N/A').join(', '),
+      role: contacts.map(c => c.role || 'N/A').join(', '),
+      email: contacts.map(c => c.email || 'Not Discovered').join(', '),
+      linkedIn: contacts.map(c => c.linkedIn || 'Not Discovered').join(', '),
+      outreachStatus: contacts.map(c => c.outreachStatus || 'Not Contacted').join(', '),
+      reasoning: opp.qualificationScore?.reasoning || '',
+      sourceUrl: opp.sourceUrl
+    };
   }
 
-  for (const row of payloadRows) {
-    try {
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(row)
-      });
-      if (!response.ok) {
-        db.addLog(`Google Sheets webhook returned error: ${response.statusText}`, 'warn');
-      } else {
-        db.addLog(`Google Sheets sync successful for contact: ${row.contactName}`, 'info');
-      }
-    } catch (err) {
-      db.addLog(`Google Sheets sync failed: ${err.message}`, 'warn');
+  try {
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payloadRow)
+    });
+    if (!response.ok) {
+      db.addLog(`Google Sheets webhook returned error: ${response.statusText}`, 'warn');
+    } else {
+      db.addLog(`Google Sheets sync successful for opportunity: ${opp.propertyName}`, 'info');
     }
+  } catch (err) {
+    db.addLog(`Google Sheets sync failed: ${err.message}`, 'warn');
   }
 }

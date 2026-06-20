@@ -274,16 +274,25 @@ export async function sendDailySummaryReport(newOpps = [], newContacts = [], sen
     .sort((a, b) => b.qualificationScore.overallScore - a.qualificationScore.overallScore)
     .slice(0, 10);
 
+  const allContacts = db.getContacts();
+
   const newOppsTable = newOpps.length > 0 
-    ? newOpps.map(o => `
-        <tr>
-          <td style="border:1px solid #ddd; padding:8px;">${o.propertyName}</td>
-          <td style="border:1px solid #ddd; padding:8px;">${o.city}, ${o.state}</td>
-          <td style="border:1px solid #ddd; padding:8px;">${o.projectType}</td>
-          <td style="border:1px solid #ddd; padding:8px; text-align:center; font-weight:bold; color:${o.status === 'shortlisted' ? 'green' : 'red'};">${o.qualificationScore?.overallScore || 'N/A'}</td>
-        </tr>
-      `).join('')
-    : '<tr><td colspan="4" style="border:1px solid #ddd; padding:8px; text-align:center;">No new opportunities discovered today.</td></tr>';
+    ? newOpps.map(o => {
+        const oppContacts = allContacts.filter(c => c.opportunityId === o.id);
+        const dmText = oppContacts.length > 0 
+          ? oppContacts.map(c => `• ${c.fullName}${c.designation ? ` (${c.designation})` : ''}`).join('<br>')
+          : 'None';
+        return `
+          <tr>
+            <td style="border:1px solid #ddd; padding:8px;">${o.propertyName}</td>
+            <td style="border:1px solid #ddd; padding:8px;">${o.city}, ${o.state}</td>
+            <td style="border:1px solid #ddd; padding:8px;">${o.projectType}</td>
+            <td style="border:1px solid #ddd; padding:8px; text-align:center; font-weight:bold; color:${o.status === 'shortlisted' ? 'green' : 'red'};">${o.qualificationScore?.overallScore || 'N/A'}</td>
+            <td style="border:1px solid #ddd; padding:8px; font-size:12px;">${dmText}</td>
+          </tr>
+        `;
+      }).join('')
+    : '<tr><td colspan="5" style="border:1px solid #ddd; padding:8px; text-align:center;">No new opportunities discovered today.</td></tr>';
 
   const newContactsList = newContacts.length > 0
     ? newContacts.map(c => `
@@ -297,14 +306,21 @@ export async function sendDailySummaryReport(newOpps = [], newContacts = [], sen
       `).join('')
     : '<li>No outreach emails sent today.</li>';
 
-  const topOppsList = highPriorityOpps.map(o => `
-    <tr>
-      <td style="border:1px solid #ddd; padding:8px;"><strong>${o.propertyName}</strong></td>
-      <td style="border:1px solid #ddd; padding:8px;">${o.city}</td>
-      <td style="border:1px solid #ddd; padding:8px; text-align:center;"><strong>${o.qualificationScore.overallScore}</strong></td>
-      <td style="border:1px solid #ddd; padding:8px;">${o.qualificationScore.reasoning}</td>
-    </tr>
-  `).join('');
+  const topOppsList = highPriorityOpps.map(o => {
+    const oppContacts = allContacts.filter(c => c.opportunityId === o.id);
+    const dmText = oppContacts.length > 0 
+      ? oppContacts.map(c => `• ${c.fullName}${c.designation ? ` (${c.designation})` : ''}`).join('<br>')
+      : 'None';
+    return `
+      <tr>
+        <td style="border:1px solid #ddd; padding:8px;"><strong>${o.propertyName}</strong></td>
+        <td style="border:1px solid #ddd; padding:8px;">${o.city}</td>
+        <td style="border:1px solid #ddd; padding:8px; text-align:center;"><strong>${o.qualificationScore.overallScore}</strong></td>
+        <td style="border:1px solid #ddd; padding:8px; font-size:12px;">${dmText}</td>
+        <td style="border:1px solid #ddd; padding:8px;">${o.qualificationScore.reasoning}</td>
+      </tr>
+    `;
+  }).join('');
 
   const reportHtml = `
     <div style="font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
@@ -320,6 +336,7 @@ export async function sendDailySummaryReport(newOpps = [], newContacts = [], sen
             <th style="border:1px solid #ddd; padding:8px; text-align:left;">Location</th>
             <th style="border:1px solid #ddd; padding:8px; text-align:left;">Type</th>
             <th style="border:1px solid #ddd; padding:8px; text-align:center;">Score</th>
+            <th style="border:1px solid #ddd; padding:8px; text-align:left;">Decision Makers</th>
           </tr>
         </thead>
         <tbody>
@@ -344,6 +361,7 @@ export async function sendDailySummaryReport(newOpps = [], newContacts = [], sen
             <th style="border:1px solid #ddd; padding:8px; text-align:left;">Property</th>
             <th style="border:1px solid #ddd; padding:8px; text-align:left;">Location</th>
             <th style="border:1px solid #ddd; padding:8px; text-align:center;">Score</th>
+            <th style="border:1px solid #ddd; padding:8px; text-align:left;">Decision Makers</th>
             <th style="border:1px solid #ddd; padding:8px; text-align:left;">Qualification Reasoning</th>
           </tr>
         </thead>
