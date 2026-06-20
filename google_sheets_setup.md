@@ -18,10 +18,21 @@ This guide shows you how to connect your live agent system to a **Google Sheet**
 ```javascript
 function doPost(e) {
   try {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     var data = JSON.parse(e.postData.contents);
     
-    // Append row to sheet date-wise
+    // 1. Handle email sending fallback (from agent system)
+    if (data.type === 'email') {
+      MailApp.sendEmail({
+        to: data.to,
+        subject: data.subject,
+        htmlBody: data.html
+      });
+      return ContentService.createTextOutput(JSON.stringify({ result: "success" }))
+                           .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // 2. Append row to sheet date-wise (leads opportunities)
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     sheet.appendRow([
       new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), // Indian Timestamp
       data.propertyName,
