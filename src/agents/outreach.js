@@ -106,6 +106,7 @@ export async function generateOutreachEmail(contact, opportunity) {
 You are Dinesh Raut, representative of Fanusta, a premier design-build contractor in India.
 Fanusta provides turnkey interior design, fit-out, renovation, and execution services for hotels, resorts, and premium villas.
 Your tone should be professional, executive, concise, and highly relevant.
+Address the recipient directly using their name (e.g. 'Dear Sandip,' or 'Dear Sandip Kumar,' depending on professional tone). NEVER use generic placeholders like '[Contact Name]', '[Contact's Name]', or '[Recipient Name]'.
 `;
 
   let prompt = '';
@@ -120,12 +121,13 @@ Project Reference: ${opportunity.propertyName} (${opportunity.projectType} in ${
 Guidelines (Version A - Corporate):
 - Subject Line: Introduction – Design-Build Support for Hospitality Projects
 - Tone: Professional, executive, concise, respectful.
+- Greeting: Start with a professional greeting addressing ${contact.fullName} directly (e.g., "Dear ${contact.fullName}," or "Dear ${contact.fullName.split(' ')[0]},"). Do not use generic name placeholders.
 - Content: Congratulate or reference the project announcement/renovation. Briefly state how Fanusta can serve as their Design-Build partner, ensuring seamless execution, turnkey interiors, and modular furniture capability.
 - Call to Action (CTA): Request a brief 15-20 minute introductory MS Teams/Zoom call.
 - Signature: 
   Dinesh Raut
   Design-Build Partner | Fanusta
-  dinesh.raut@fanusta.com | +91 99999 99999
+  dineshraut@fanusta.com | +91 7798003399
 
 Do not include any placeholders or markdown email wrappers. Output only the email body.
 `;
@@ -140,12 +142,13 @@ Project Reference: ${opportunity.propertyName} (${opportunity.projectType} in ${
 Guidelines (Version B - Boutique Hospitality):
 - Subject Line: Quick Introduction – Hospitality Design & Turnkey
 - Tone: Friendly, professional, personalized, welcoming, passionate about hospitality aesthetics.
+- Greeting: Start with a warm greeting addressing ${contact.fullName} directly (e.g., "Dear ${contact.fullName}," or "Dear ${contact.fullName.split(' ')[0]},"). Do not use generic name placeholders.
 - Content: Share appreciation for the boutique concept/project. Explain how Fanusta collaborates with boutique hotels and luxury resorts to create signature hospitality interiors, custom craftsmanship, and turnkey project execution that wows guests.
 - Call to Action (CTA): Request a brief 15-20 minute introductory call to connect.
 - Signature:
   Dinesh Raut
   Design-Build Partner | Fanusta
-  dinesh.raut@fanusta.com | +91 99999 99999
+  dineshraut@fanusta.com | +91 7798003399
 
 Do not include any placeholders or markdown email wrappers. Output only the email body.
 `;

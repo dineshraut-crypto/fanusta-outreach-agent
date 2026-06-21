@@ -231,7 +231,9 @@ function getMockAiResponse(prompt, responseJson) {
 
   // 5. Agent 5: Email Generation Prompt
   if (prompt.includes('Corporate') || prompt.includes('Version A')) {
-    return `Dear [Contact Name],
+    const nameMatch = prompt.match(/Name:\s*([^\r\n]+)/);
+    const contactName = nameMatch ? nameMatch[1].trim() : 'Sir/Madam';
+    return `Dear ${contactName},
 
 I hope this email finds you well.
 
@@ -244,11 +246,13 @@ Could we connect for a brief 15-20 minute introductory call next week to introdu
 Best regards,
 Dinesh Raut
 Design-Build Partner | Fanusta
-dinesh.raut@fanusta.com | +91 99999 99999`;
+dineshraut@fanusta.com | +91 7798003399`;
   }
 
   // Default Boutique Email
-  return `Dear [Contact Name],
+  const nameMatch = prompt.match(/Name:\s*([^\r\n]+)/);
+  const contactName = nameMatch ? nameMatch[1].trim() : 'Sir/Madam';
+  return `Dear ${contactName},
 
 I hope you are doing well.
 
@@ -261,5 +265,5 @@ I would love to schedule a quick 15-minute call next week to share how we can su
 Warm regards,
 Dinesh Raut
 Design-Build Partner | Fanusta
-dinesh.raut@fanusta.com | +91 99999 99999`;
+dineshraut@fanusta.com | +91 7798003399`;
 }
