@@ -22,9 +22,7 @@ function doPost(e) {
     
     // 1. Handle email sending fallback (from agent system)
     if (data.type === 'email') {
-      MailApp.sendEmail({
-        to: data.to,
-        subject: data.subject,
+      GmailApp.sendEmail(data.to, data.subject, "", {
         htmlBody: data.html
       });
       return ContentService.createTextOutput(JSON.stringify({ result: "success" }))
