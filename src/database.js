@@ -178,7 +178,16 @@ export const db = {
   },
   saveSettings(settings) {
     const current = this.getSettings();
-    const updated = { ...current, ...settings };
+    // Trim string fields to prevent whitespace issues
+    const trimmed = {};
+    for (const [key, val] of Object.entries(settings)) {
+      if (typeof val === 'string') {
+        trimmed[key] = val.trim();
+      } else {
+        trimmed[key] = val;
+      }
+    }
+    const updated = { ...current, ...trimmed };
     return writeJson('settings', updated);
   },
 

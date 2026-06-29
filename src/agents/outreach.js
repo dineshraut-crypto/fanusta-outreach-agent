@@ -47,7 +47,17 @@ async function sendEmail({ to, subject, html, text, settings }) {
       return { messageId: info.messageId || 'smtp-' + Date.now() };
     } catch (err) {
       smtpError = err;
-      db.addLog(`SMTP delivery failed: ${err.message}. Trying webhook fallback...`, 'warn');
+      let smtpAdvice = '';
+      if (err.message.includes('534') || err.message.toLowerCase().includes('application-specific password required')) {
+        smtpAdvice = ' (Tip: You must use a Gmail "App Password" instead of your normal Gmail account password. Generate one in your Google Account settings under Security)';
+      } else if (err.message.includes('535') || err.message.toLowerCase().includes('authentication failed') || err.message.toLowerCase().includes('username and password not accepted')) {
+        smtpAdvice = ' (Tip: Authentication failed. Please verify your SMTP Username and App Password)';
+      } else if (err.message.includes('ENOTFOUND') || err.message.includes('EAI_AGAIN')) {
+        smtpAdvice = ' (Tip: Hostname not found. Please verify your SMTP Host address)';
+      } else if (err.message.includes('ETIMEDOUT') || err.message.includes('timeout')) {
+        smtpAdvice = ' (Tip: Connection timed out. Render cloud hosting blocks standard SMTP ports like 25, 465, and 587. Please use the Google Sheets Webhook fallback)';
+      }
+      db.addLog(`SMTP delivery failed: ${err.message}${smtpAdvice}. Trying webhook fallback...`, 'warn');
     }
   }
 
@@ -78,8 +88,18 @@ async function sendEmail({ to, subject, html, text, settings }) {
         throw new Error(resData.message || 'Unknown Webhook error');
       }
     } catch (err) {
-      db.addLog(`Webhook email delivery failed: ${err.message}`, 'error');
-      throw new Error(`Email sending failed. SMTP: ${smtpError ? smtpError.message : 'N/A'}. Webhook: ${err.message}`);
+      let webhookAdvice = '';
+      if (err.message.includes('403')) {
+        webhookAdvice = ' (Tip: Access Forbidden. Ensure your Google Apps Script Web App deployment is configured with "Who has access: Anyone")';
+      } else if (err.message.includes('401')) {
+        webhookAdvice = ' (Tip: Unauthorized. Please check your Web App URL and permissions)';
+      } else if (err.message.toLowerCase().includes('doget') || err.message.includes('Script function not found')) {
+        webhookAdvice = ' (Tip: Apps Script failed because it redirected to doGet. Ensure you deployed doPost correctly and authorized the script)';
+      } else if (err.code === 'UND_ERR_CONNECT_TIMEOUT' || err.message.toLowerCase().includes('timeout')) {
+        webhookAdvice = ' (Tip: Connection timed out. Please check your internet connectivity or if script.google.com is blocked)';
+      }
+      db.addLog(`Webhook email delivery failed: ${err.message}${webhookAdvice}`, 'error');
+      throw new Error(`Email sending failed. SMTP: ${smtpError ? smtpError.message : 'N/A'}. Webhook: ${err.message}${webhookAdvice}`);
     }
   }
 
