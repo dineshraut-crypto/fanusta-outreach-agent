@@ -63,43 +63,51 @@ async function sendEmail({ to, subject, html, text, settings }) {
 
   // Fallback to Google Sheets Webhook if available
   if (settings.google_sheet_webhook) {
-    try {
-      db.addLog(`Attempting Webhook delivery to ${to}...`, 'info');
-      const response = await fetch(settings.google_sheet_webhook, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'email',
-          to: to,
-          subject: subject,
-          html: html
-        })
-      });
+    let attempts = 3;
+    while (attempts > 0) {
+      try {
+        db.addLog(`Attempting Webhook delivery to ${to}...`, 'info');
+        const response = await fetch(settings.google_sheet_webhook, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'email',
+            to: to,
+            subject: subject,
+            html: html
+          })
+        });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
 
-      const resData = await response.json();
-      if (resData.result === 'success') {
-        db.addLog(`Email sent successfully via Webhook to ${to}`, 'info');
-        return { messageId: 'webhook-' + Date.now() };
-      } else {
-        throw new Error(resData.message || 'Unknown Webhook error');
+        const resData = await response.json();
+        if (resData.result === 'success') {
+          db.addLog(`Email sent successfully via Webhook to ${to}`, 'info');
+          return { messageId: 'webhook-' + Date.now() };
+        } else {
+          throw new Error(resData.message || 'Unknown Webhook error');
+        }
+      } catch (err) {
+        attempts--;
+        if (attempts === 0) {
+          let webhookAdvice = '';
+          if (err.message.includes('403')) {
+            webhookAdvice = ' (Tip: Access Forbidden. Ensure your Google Apps Script Web App deployment is configured with "Who has access: Anyone")';
+          } else if (err.message.includes('401')) {
+            webhookAdvice = ' (Tip: Unauthorized. Please check your Web App URL and permissions)';
+          } else if (err.message.toLowerCase().includes('doget') || err.message.includes('Script function not found')) {
+            webhookAdvice = ' (Tip: Apps Script failed because it redirected to doGet. Ensure you deployed doPost correctly and authorized the script)';
+          } else if (err.code === 'UND_ERR_CONNECT_TIMEOUT' || err.message.toLowerCase().includes('timeout') || err.message.toLowerCase().includes('fetch failed')) {
+            webhookAdvice = ' (Tip: Connection timed out or failed. Please check your internet connectivity or if script.google.com is blocked)';
+          }
+          db.addLog(`Webhook email delivery failed after all retries: ${err.message}${webhookAdvice}`, 'error');
+          throw new Error(`Email sending failed. SMTP: ${smtpError ? smtpError.message : 'N/A'}. Webhook: ${err.message}${webhookAdvice}`);
+        }
+        db.addLog(`Webhook delivery failed (${err.message}). Retrying in 3 seconds (${attempts} attempts remaining)...`, 'warn');
+        await new Promise(r => setTimeout(r, 3000));
       }
-    } catch (err) {
-      let webhookAdvice = '';
-      if (err.message.includes('403')) {
-        webhookAdvice = ' (Tip: Access Forbidden. Ensure your Google Apps Script Web App deployment is configured with "Who has access: Anyone")';
-      } else if (err.message.includes('401')) {
-        webhookAdvice = ' (Tip: Unauthorized. Please check your Web App URL and permissions)';
-      } else if (err.message.toLowerCase().includes('doget') || err.message.includes('Script function not found')) {
-        webhookAdvice = ' (Tip: Apps Script failed because it redirected to doGet. Ensure you deployed doPost correctly and authorized the script)';
-      } else if (err.code === 'UND_ERR_CONNECT_TIMEOUT' || err.message.toLowerCase().includes('timeout')) {
-        webhookAdvice = ' (Tip: Connection timed out. Please check your internet connectivity or if script.google.com is blocked)';
-      }
-      db.addLog(`Webhook email delivery failed: ${err.message}${webhookAdvice}`, 'error');
-      throw new Error(`Email sending failed. SMTP: ${smtpError ? smtpError.message : 'N/A'}. Webhook: ${err.message}${webhookAdvice}`);
     }
   }
 

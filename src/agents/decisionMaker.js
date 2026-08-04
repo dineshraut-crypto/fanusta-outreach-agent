@@ -162,13 +162,22 @@ async function identifyDecisionMakersViaGoogleSearch(opportunity, apiKey) {
     const contacts = JSON.parse(textResponse.trim());
     if (Array.isArray(contacts)) {
       db.addLog(`Directly Extracted (via Grounding) ${contacts.length} decision makers for ${propertyName}.`, 'info');
-      return contacts.map(c => ({
-        ...c,
-        linkedIn: c.linkedIn === 'Not Discovered' ? null : c.linkedIn,
-        email: c.publicContactInfo && c.publicContactInfo !== 'Not Discovered' && c.publicContactInfo.includes('@') ? c.publicContactInfo : null,
-        opportunityId: opportunity.id,
-        company: hotelGroup !== 'Unknown' ? hotelGroup : propertyName
-      }));
+      return contacts.map(c => {
+        let parsedEmail = null;
+        if (c.publicContactInfo && c.publicContactInfo !== 'Not Discovered') {
+          const match = c.publicContactInfo.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+          if (match) {
+            parsedEmail = match[0].trim().toLowerCase();
+          }
+        }
+        return {
+          ...c,
+          linkedIn: c.linkedIn === 'Not Discovered' ? null : c.linkedIn,
+          email: parsedEmail,
+          opportunityId: opportunity.id,
+          company: hotelGroup !== 'Unknown' ? hotelGroup : propertyName
+        };
+      });
     }
     return [];
   } catch (error) {
