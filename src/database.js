@@ -39,7 +39,7 @@ const DEFAULTS = {
     run_time: '08:00',
     opportunity_score_threshold: 70,
     daily_outreach_limit: 5,
-    google_sheet_webhook: ''
+    google_sheet_webhook: 'https://script.google.com/macros/s/AKfycbxfl7KjMuuvFiXQAXvleIZDOFToXxpBdyPiHdUNoZ8_m4hH5KUZvXouY_YYLgRaODLV/exec'
   }
 };
 
@@ -173,7 +173,7 @@ export const db = {
       run_time: process.env.RUN_TIME || fileSettings.run_time || '08:00',
       opportunity_score_threshold: process.env.OPPORTUNITY_SCORE_THRESHOLD ? parseInt(process.env.OPPORTUNITY_SCORE_THRESHOLD) : (fileSettings.opportunity_score_threshold || 70),
       daily_outreach_limit: process.env.DAILY_OUTREACH_LIMIT ? parseInt(process.env.DAILY_OUTREACH_LIMIT) : (fileSettings.daily_outreach_limit || 5),
-      google_sheet_webhook: process.env.GOOGLE_SHEET_WEBHOOK || fileSettings.google_sheet_webhook || ''
+      google_sheet_webhook: process.env.GOOGLE_SHEET_WEBHOOK || fileSettings.google_sheet_webhook || 'https://script.google.com/macros/s/AKfycbxfl7KjMuuvFiXQAXvleIZDOFToXxpBdyPiHdUNoZ8_m4hH5KUZvXouY_YYLgRaODLV/exec'
     };
   },
   saveSettings(settings) {
